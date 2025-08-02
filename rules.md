@@ -6,6 +6,8 @@
   * Slightly formal, dramatic, and reverent tone.
   * Avoid slang or overly modern expressions unless present in the original.
   * Translate for understanding, not word-for-word literalness. Use classic xianxia phrases like "courting death, etc."
+  * Be especially cautious with the pronouns, so that you don't mix up who does what.
+  * Translate all of the chinese characters, don't leave anything untranslated.
 
 ## 2. Formatting
 

@@ -2,18 +2,26 @@ from openai import OpenAI
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import re
 
 load_dotenv()
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+def get_next_chapter_number():
+    existing = list(Path(".").glob("ch*.md"))
+    chapter_nums = [int(re.search(r"ch(\d+)\.md", f.name).group(1)) for f in existing if re.search(r"ch(\d+)\.md", f.name)]
+    return f"{(max(chapter_nums) + 1) if chapter_nums else 1:04}"
+
 # File paths
 RULES_PATH = "rules.md"
 GLOSSARY_PATH = "glossary.md"
-CHAPTER = "0147"
+CHAPTER = get_next_chapter_number()
 CHAPTER_INPUT_PATH = f"piaotian_chapters/ch{CHAPTER}.txt"
-CHAPTER_OUTPUT_PATH = f"ch0{int(CHAPTER)+1}.md"
+CHAPTER_OUTPUT_PATH = f"ch{CHAPTER}.md"
+OBSIDIAN_PATH = f"/Users/meecosha/MEGA/Vault/Martial Peak/chapters/ch{CHAPTER}.md"
+
 
 def load_file(path):
     return Path(path).read_text(encoding="utf-8").strip()
@@ -51,7 +59,7 @@ def main():
     user_prompt = f"""
 IMPORTANT: After translating the chapter, you must list any new specific terms that may require consistency later — including names, realms, techniques, materials, artefacts, or sects — in this format:
 
-Chinese Term — English Term
+Chinese Hanzi — English Term
 
 Always err on the side of caution. If there’s even a small chance something is specific or unique, add it.  
 If there are no new terms, write: New Glossary Terms: None
@@ -80,11 +88,19 @@ Chapter:
 
     # Save the translated chapter
     Path(CHAPTER_OUTPUT_PATH).write_text(translation.strip(), encoding="utf-8")
+    Path(OBSIDIAN_PATH).write_text(translation.strip(), encoding="utf-8")
 
     # Append glossary if new terms found
     if "none" not in glossary_section.lower():
-        append_to_file(GLOSSARY_PATH, glossary_section.strip())
-        print("📝 New glossary terms appended.")
+        existing_glossary_lines = set(load_file(GLOSSARY_PATH).splitlines())
+        new_lines = [line.strip() for line in glossary_section.strip().splitlines() if line.strip()]
+        unique_new_lines = [line for line in new_lines if line not in existing_glossary_lines]
+
+        if unique_new_lines:
+            append_to_file(GLOSSARY_PATH, "\n".join(unique_new_lines))
+            print(f"📝 Appended {len(unique_new_lines)} new glossary terms.")
+        else:
+            print("✅ All glossary terms already exist. Nothing appended.")
     else:
         print("✅ No new glossary terms.")
 

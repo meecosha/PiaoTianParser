@@ -80,9 +80,11 @@ def process_chapter(index, url):
 # Main routine
 def main():
     links = get_all_chapter_links()
-    test_links = links  # Download first 10 chapters only for now
+    start_ch = 201
+    end_ch = 500
+    test_links = links[start_ch - 1:end_ch]  # Adjusting for 0-based indexing
 
-    for i, (title, url) in enumerate(test_links, start=1):
+    for i, (title, url) in enumerate(test_links, start=start_ch):
         process_chapter(i, url)
         time.sleep(1)  # polite delay between requests
 
