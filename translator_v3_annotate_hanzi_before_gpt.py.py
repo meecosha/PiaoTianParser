@@ -66,6 +66,7 @@ def main():
     chapter_file = f"ch{chapter_num}.txt"
     input_path = Path(CHAPTER_DIR) / chapter_file
     output_path = Path(OUTPUT_DIR) / f"ch{chapter_num}.md"
+    obsidian_output_path = f"/Users/meecosha/MEGA/Vault/Martial Peak/chapters/ch{chapter_num}.md"
 
     rules = load_file(RULES_PATH)
     glossary = json.loads(load_file(GLOSSARY_PATH))
@@ -126,7 +127,8 @@ Chapter:
     print("\n=== End of Output ===\n")
 
     save_file(output_path, translation)
-    print(f"🎉 Chapter saved to: {output_path}")
+    save_file(obsidian_output_path, translation)
+    print(f"🎉 Chapter saved to: {output_path} and to Obsidian")
 
 if __name__ == "__main__":
     main()
