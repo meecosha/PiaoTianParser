@@ -10,13 +10,13 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def get_next_chapter_number():
-    existing = list(Path(".").glob("ch*.md"))
+    existing = list(Path("..").glob("ch*.md"))
     chapter_nums = [int(re.search(r"ch(\d+)\.md", f.name).group(1)) for f in existing if re.search(r"ch(\d+)\.md", f.name)]
     return f"{(max(chapter_nums) + 1) if chapter_nums else 1:04}"
 
 # File paths
-RULES_PATH = "rules.md"
-GLOSSARY_PATH = "glossary.md"
+RULES_PATH = "../rules.md"
+GLOSSARY_PATH = "../glossary.md"
 CHAPTER = get_next_chapter_number()
 CHAPTER_INPUT_PATH = f"piaotian_chapters/ch{CHAPTER}.txt"
 CHAPTER_OUTPUT_PATH = f"ch{CHAPTER}.md"
