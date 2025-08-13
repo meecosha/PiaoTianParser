@@ -4,7 +4,7 @@ from pathlib import Path
 
 # === Paths ===
 GLOSSARY_PATH = "../glossary.json"  # Your glossary file
-INPUT_FILE = "../piaotian_chapters/ch0215.txt"  # Raw Chinese chapter file
+INPUT_FILE = "../old chinese/ch0215.txt"  # Raw Chinese chapter file
 OUTPUT_FILE = "../annotated_ch0215.md"  # Annotated result
 
 # === Load Files ===

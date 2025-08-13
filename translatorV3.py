@@ -14,7 +14,12 @@ RULES_PATH = "rules.md"
 GLOSSARY_PATH = "glossary.json"
 CHAPTER_DIR = "piaotian_chapters"
 OUTPUT_DIR = "final_chapters"
-MODEL = "gpt-4o-mini-2024-07-18"
+# MODEL = "gpt-5-2025-08-07"
+# MODEL = "gpt-5-mini-2025-08-07"
+# MODEL = "gpt-4o-mini-2024-07-18"
+MODEL = "gpt-4.1-mini-2025-04-14"
+# MODEL = "gpt-4o-2024-08-06"
+# MODEL = "o4-mini-2025-04-16"
 
 Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 
@@ -36,7 +41,7 @@ def call_gpt(system_prompt, user_prompt):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        temperature=0.3
+        # temperature=0.3
     )
 
     print("📊 Token Usage:")
@@ -57,7 +62,7 @@ def merge_glossary(existing, new):
 def annotate_with_glossary(text, glossary):
     for hanzi, translation in sorted(glossary.items(), key=lambda x: len(x[0]), reverse=True):
         pattern = re.escape(hanzi) + r"(?!\s*\()"
-        text = re.sub(pattern, f"{hanzi} ({translation})", text)
+        text = re.sub(pattern, f"{hanzi}[{translation}]", text)
     return text
 
 def main():
@@ -77,30 +82,39 @@ def main():
     system_prompt = "You are a professional xianxia translator. Follow all formatting and terminology instructions."
     user_prompt = f"""
 IMPORTANT:
-If a Hanzi term has an English translation in parentheses after it (like 修罗剑 (Shura Sword)), use that English name in your translation. Do not invent or re-translate it.
+If a Hanzi term has an English translation in square brackets after it (like 修罗剑[Shura Sword]), use only that English translation in your translation. Do not invent or re-translate it. And don't include the square brackets in the final output.
 
-At the end of the translation, list any newly encountered Hanzi terms (not annotated) with their proposed English equivalents in this format:
+At the very end of your response, you MUST return only the new glossary terms (all and any names, sects and places, animals, beasts, plants, techniques, skills, artifacts, cultivation terms, or any slightly specific terms) in this exact format:
+
+Only include terms where the key is in Hanzi (Chinese characters). Do NOT include already translated English words, nor any entries without Chinese characters. Use the following format:
 
 ```json
 {{
-  "Hanzi1": "English Term 1",
-  "Hanzi2": "English Term 2"
+  "示例一": "Example Translation One",
+  "示例二": "Example Translation Two"
 }}
-```
 
-If there are no new terms, return:
+
+
+If there are no new terms, still return empty json in this format:
+
 ```json
 {{}}
-```
+``` 
 
-Translate the following chapter according to these rules.
 
-Translation rules:
+Do not include any explanation, comments, titles, or extra text before or after the JSON block. The block must be parsable by code as-is.
+
+Translate the following chapter to english according to the rules below.
 {rules}
 
 Chapter:
 {annotated_text}
 """
+
+    print("\n=== FINAL PROMPT SENT TO GPT ===\n")
+    print(user_prompt)
+    print("\n=== END OF PROMPT ===\n")
 
     print(f"🚀 Translating Chapter {chapter_num}...")
 
