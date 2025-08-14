@@ -14,6 +14,7 @@ RULES_PATH = "rules.md"
 GLOSSARY_PATH = "glossary.json"
 CHAPTER_DIR = "piaotian_chapters"
 OUTPUT_DIR = "final_chapters"
+PROMPT_DIR = "prompt_to_gpt"
 # MODEL = "gpt-5-2025-08-07"
 # MODEL = "gpt-5-mini-2025-08-07"
 # MODEL = "gpt-4o-mini-2024-07-18"
@@ -71,6 +72,7 @@ def main():
     chapter_file = f"ch{chapter_num}.txt"
     input_path = Path(CHAPTER_DIR) / chapter_file
     output_path = Path(OUTPUT_DIR) / f"ch{chapter_num}.md"
+    prompt_path = Path(PROMPT_DIR) / f"prompt_ch{chapter_num}.txt"
     obsidian_output_path = f"/Users/meecosha/MEGA/Vault/Martial Peak/chapters/ch{chapter_num}.md"
 
     rules = load_file(RULES_PATH)
@@ -122,6 +124,8 @@ Chapter:
     print("\n=== FINAL PROMPT SENT TO GPT ===\n")
     print(user_prompt)
     print("\n=== END OF PROMPT ===\n")
+
+    save_file(prompt_path, user_prompt)
 
     print(f"🚀 Translating Chapter {chapter_num}...")
 
