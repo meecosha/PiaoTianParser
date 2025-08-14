@@ -52,13 +52,35 @@ def call_gpt(system_prompt, user_prompt):
 
     return response.choices[0].message.content
 
-def merge_glossary(existing, new):
-    updated = False
-    for hanzi, translation in new.items():
-        if hanzi not in existing:
-            existing[hanzi] = translation
-            updated = True
-    return existing, updated
+def merge_glossary(existing: dict, candidates: dict, *, overwrite: bool = False):
+    """
+    Merge `candidates` into `existing`.
+
+    Returns:
+        merged (dict): the updated glossary
+        added_count (int): number of brand-new keys inserted
+        updated_count (int): number of existing keys whose value was changed (only if overwrite=True)
+        added_keys (list[str]): keys that were newly added
+        updated_keys (list[str]): keys that were updated (only if overwrite=True)
+        skipped_keys (list[str]): keys present in candidates but not applied (already existed and overwrite=False)
+    """
+    added_keys = []
+    updated_keys = []
+    skipped_keys = []
+
+    for k, v in candidates.items():
+        if k in existing:
+            if overwrite and existing[k] != v:
+                existing[k] = v
+                updated_keys.append(k)
+            else:
+                skipped_keys.append(k)
+        else:
+            existing[k] = v
+            added_keys.append(k)
+
+    return existing, len(added_keys), len(updated_keys), added_keys, updated_keys, skipped_keys
+
 
 def annotate_with_glossary(text, glossary):
     for hanzi, translation in sorted(glossary.items(), key=lambda x: len(x[0]), reverse=True):
@@ -125,35 +147,82 @@ Chapter:
     print(user_prompt)
     print("\n=== END OF PROMPT ===\n")
 
-    save_file(prompt_path, user_prompt)
-
     print(f"🚀 Translating Chapter {chapter_num}...")
-
     response = call_gpt(system_prompt, user_prompt)
 
-    match = re.search(r"```json\s*({[\s\S]+?})\s*```", response)
-    if not match:
-        print("❌ Failed to find glossary block in GPT output.")
-        return
-
-    translation = response[:match.start()].strip()
-    new_terms = json.loads(match.group(1))
-
-    glossary, updated = merge_glossary(glossary, new_terms)
-    if updated:
-        with open(GLOSSARY_PATH, "w", encoding="utf-8") as f:
-            json.dump(glossary, f, ensure_ascii=False, indent=2)
-        print(f"📝 Appended {len(new_terms)} new glossary terms.")
-    else:
-        print("✅ No new glossary terms.")
+    # --- Robust glossary block extraction ---
+    text = response
 
     print("\n=== Final Translated Output ===\n")
     print(response)
     print("\n=== End of Output ===\n")
 
+    # 1) Prefer ```json fenced
+    m = re.search(r"```json\s*({[\s\S]+?})\s*```", text, flags=re.IGNORECASE)
+    reason = "matched ```json fenced block"
+    # 2) Fallback: any fenced code block containing a top-level JSON object
+    if not m:
+        m = re.search(r"```\s*({[\s\S]+?})\s*```", text)
+        reason = "matched generic ``` fenced block"
+    # 3) Fallback: last JSON-ish object in the message
+    if not m:
+        # Greedy to grab the last {...} chunk
+        m = re.search(r"({[\s\S]+})\s*$", text)
+        reason = "matched trailing {…} block (fallback)"
+
+    if not m:
+        print("❌ Could not locate a JSON glossary block. Showing tail of response for debugging:\n",
+              text[-800:])
+        return
+
+    translation = text[:m.start()].strip()
+    raw_glossary_block = m.group(1)
+
+    try:
+        new_terms = json.loads(raw_glossary_block)
+    except json.JSONDecodeError as e:
+        print("❌ Glossary JSON block could not be parsed:", e)
+        print("Block preview:\n", raw_glossary_block[:500])
+        return
+
+    print(f"ℹ️ Glossary block found via: {reason}. Keys received: {len(new_terms)}")
+
+    # ✅ Keep only terms whose KEY has 2+ Hanzi (Chinese characters)
+    filtered_terms = {
+        k: v for k, v in new_terms.items()
+        if len(re.findall(r"[\u4e00-\u9fff]", k)) >= 2
+    }
+    if len(filtered_terms) != len(new_terms):
+        skipped = [k for k in new_terms.keys() if k not in filtered_terms]
+        print(f"ℹ️ Filtered out {len(skipped)} non-2+Hanzi keys: {skipped[:10]}{' …' if len(skipped) > 10 else ''}")
+
+    # Merge (make sure your merge_glossary returns the 6-tuple as discussed)
+    glossary, added_count, updated_count, added_keys, updated_keys, skipped_keys = merge_glossary(
+        glossary,
+        filtered_terms,
+        overwrite=False
+    )
+
+    # Persist and report
+    if added_count or updated_count:
+        with open(GLOSSARY_PATH, "w", encoding="utf-8") as f:
+            json.dump(glossary, f, ensure_ascii=False, indent=2)
+        msg = f"📝 Appended {added_count} new glossary term{'s' if added_count != 1 else ''}."
+        if updated_count:
+            msg += f" Updated {updated_count} existing entr{'ies' if updated_count != 1 else 'y'}."
+        print(msg)
+        if added_keys:
+            print(f"   ➕ Added keys: {added_keys[:10]}{' …' if len(added_keys) > 10 else ''}")
+        if skipped_keys:
+            print(f"   ↩️ Skipped (already existed): {skipped_keys[:10]}{' …' if len(skipped_keys) > 10 else ''}")
+    else:
+        print("✅ No new glossary terms.")
+
     save_file(output_path, translation)
     save_file(obsidian_output_path, translation)
+    save_file(prompt_path, user_prompt)
     print(f"🎉 Chapter saved to: {output_path} and to Obsidian")
+
 
 if __name__ == "__main__":
     main()
