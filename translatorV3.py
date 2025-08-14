@@ -84,16 +84,24 @@ def main():
 IMPORTANT:
 If a Hanzi term has an English translation in square brackets after it (like 修罗剑[Shura Sword]), use only that English translation in your translation. Do not invent or re-translate it. And don't include the square brackets in the final output.
 
-At the very end of your response, you MUST return only the new glossary terms (all and any names, sects and places, animals, beasts, plants, techniques, skills, artifacts, cultivation terms, or any slightly specific terms) in this exact format:
+After translating, you MUST perform a fact-checking and fidelity review by comparing your translation against the original Chinese text to ensure:
+- All pronouns match the correct gender and refer to the right person.
+- All names and titles are correct according to the glossary and the original text.
+- Relationships (e.g., brother, cousin, master, disciple) are accurately preserved.
+- No meaning has been omitted, altered, or added.
+- Contextually ambiguous terms (e.g., 大汉, 向家族, etc.) are interpreted correctly based on the scene.
 
-Only include terms where the key is in Hanzi (Chinese characters). Do NOT include already translated English words, nor any entries without Chinese characters. Use the following format:
+Correct any issues found during this review before producing your final translation.
+
+At the very end of your response, you MUST return only the new glossary terms (all and any names, sects and places, animals, beasts, plants, techniques, skills, artifacts, cultivation terms, or any slightly specific terms). Only include terms where the key is in Hanzi (Chinese characters). Do NOT include already translated English words, nor any entries without Chinese characters. If it's a character's name, include their gender only in the glossary, not in the translation. Use the following format:
 
 ```json
 {{
   "示例一": "Example Translation One",
-  "示例二": "Example Translation Two"
+  "示例二": "Example Translation Two",
+  "姓名": "Name (male)",
+  "姓名": "Name (female)"
 }}
-
 
 
 If there are no new terms, still return empty json in this format:
@@ -101,7 +109,6 @@ If there are no new terms, still return empty json in this format:
 ```json
 {{}}
 ``` 
-
 
 Do not include any explanation, comments, titles, or extra text before or after the JSON block. The block must be parsable by code as-is.
 
