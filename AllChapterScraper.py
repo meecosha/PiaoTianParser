@@ -80,8 +80,8 @@ def process_chapter(index, url):
 # Main routine
 def main():
     links = get_all_chapter_links()
-    start_ch = 498
-    end_ch = 6000
+    start_ch = 1
+    end_ch = 10
     test_links = links[start_ch - 1:end_ch]  # Adjusting for 0-based indexing
 
     for i, (title, url) in enumerate(test_links, start=start_ch):

@@ -20,9 +20,11 @@
 
 ## 3. Names & Terms
 
+* Never (never!!!) translate chinese measurments of distance or size: Li, Zhang, keep them all or transform into xianxia like measurements.
 * Use pinyin for names (e.g. Yang Kai, Su Yan) — never translate names.
 * Add new names to glossary.
 * Match case for glossary terms (e.g. Primordial Qi, not primordial qi).
+* When referring to Stages of cultivation, use Stage instead of Layer
 
 ## 4. Dialogue & Narration
 

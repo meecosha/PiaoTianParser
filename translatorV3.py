@@ -88,8 +88,37 @@ def annotate_with_glossary(text, glossary):
         text = re.sub(pattern, f"{hanzi}[{translation}]", text)
     return text
 
+def update_chapters_index(chapters_dir, output_file=None):
+    """Regenerate chapters.json from all .md files in chapters_dir."""
+    import json, os
+
+    if output_file is None:
+        output_file = os.path.join(chapters_dir, "chapters.json")
+
+    chapters = []
+    for fname in sorted(os.listdir(chapters_dir)):
+        if fname.endswith(".md"):
+            path = os.path.join(chapters_dir, fname)
+            with open(path, "r", encoding="utf-8") as f:
+                # take the first non-empty line
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        title = line.lstrip("#").strip()
+                        break
+                else:
+                    title = fname
+            chapters.append({"id": fname[:-3], "title": title})
+
+    with open(output_file, "w", encoding="utf-8") as out:
+        json.dump(chapters, out, ensure_ascii=False, indent=2)
+
+    print(f"📖 Updated {output_file} with {len(chapters)} chapters.")
+
+
 def main():
-    chapter_num = get_next_chapter_number()
+    # chapter_num = get_next_chapter_number()
+    chapter_num = "0009"
     print(chapter_num)
     chapter_file = f"ch{chapter_num}.txt"
     input_path = Path(CHAPTER_DIR) / chapter_file
@@ -106,18 +135,19 @@ def main():
     system_prompt = "You are a professional xianxia translator. Follow all formatting and terminology instructions."
     user_prompt = f"""
 IMPORTANT:
-If a Hanzi term has an English translation in square brackets after it (like 修罗剑[Shura Sword]), use only that English translation in your translation. Do not invent or re-translate it. And don't include the square brackets in the final output.
+If a Hanzi term has an English translation in square brackets after it (like 修罗剑[Shura Sword]), use that English translation in your translation. Don't include the square brackets in the final translated output.
 
 After translating, you MUST perform a fact-checking and fidelity review by comparing your translation against the original Chinese text to ensure:
 - All pronouns match the correct gender and refer to the right person.
-- All names and titles are correct according to the glossary and the original text.
-- Relationships (e.g., brother, cousin, master, disciple) are accurately preserved.
+- All names and titles are correct according t  o the glossary and the original text.
+- Relationships (e.g., brother, cousin, master,     disciple) are accurately preserved.
 - No meaning has been omitted, altered, or added.
 - Contextually ambiguous terms (e.g., 大汉, 向家族, etc.) are interpreted correctly based on the scene.
 
 Correct any issues found during this review before producing your final translation.
 
-At the very end of your response, you MUST return only the new glossary terms (all and any names, sects and places, animals, beasts, plants, techniques, skills, artifacts, cultivation terms, or any slightly specific terms). Only include terms where the key is in Hanzi (Chinese characters). Do NOT include already translated English words, nor any entries without Chinese characters. If it's a character's name, include their gender only in the glossary, not in the translation. Use the following format:
+At the very end of your response, you MUST return only the new glossary terms (all names of characters, sects and places, animals, beasts, plants, techniques, skills, artifacts) that are present verbatim in the provided Chinese chapter text. Only include terms where the key is in Hanzi (Chinese characters) and appears exactly in the provided chapter. Do NOT add, infer, guess, or recall terms from memory, even if you are certain they exist elsewhere in the novel. Do not create alternate versions of known glossary entries — use only the exact form from the text. Do NOT include any entries without Chinese characters. If it's a character's name, include their gender in the glossary, but not in the translation. 
+The glossary must be in this format:
 
 ```json
 {{
@@ -127,8 +157,7 @@ At the very end of your response, you MUST return only the new glossary terms (a
   "姓名": "Name (female)"
 }}
 
-
-If there are no new terms, still return empty json in this format:
+If there are no new terms from this chapter, output exactly:
 
 ```json
 {{}}
@@ -221,8 +250,14 @@ Chapter:
     save_file(output_path, translation)
     save_file(obsidian_output_path, translation)
     save_file(prompt_path, user_prompt)
+
+    # After saving the chapter, update the website index
+    obsidian_chapters_dir = "/Users/meecosha/MEGA/Vault/Martial Peak/chapters"
+    update_chapters_index(obsidian_chapters_dir, os.path.join(obsidian_chapters_dir, "chapters.json"))
+
     print(f"🎉 Chapter saved to: {output_path} and to Obsidian")
 
 
 if __name__ == "__main__":
     main()
+
