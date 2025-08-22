@@ -4,19 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2fbbe1ab-2775-4d4a-9989-e80361b70ed0" name="Changes" comment="Working script with translation glossary annotation before sending to gpt. Finished and renamed.">
+    <list default="true" id="2fbbe1ab-2775-4d4a-9989-e80361b70ed0" name="Changes" comment="save before changing the prompt">
       <change afterPath="$PROJECT_DIR$/.idea/PiaoTian Scraper.iml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/rules_old.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/translate_queue.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/editor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/glossary.json" beforeDir="false" afterPath="$PROJECT_DIR$/glossary.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/old scripts/replace_chinese_first.py" beforeDir="false" afterPath="$PROJECT_DIR$/old scripts/replace_chinese_first.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/rules.md" beforeDir="false" afterPath="$PROJECT_DIR$/rules.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/translator_v3_annotate_hanzi_before_gpt.py.py" beforeDir="false" afterPath="$PROJECT_DIR$/translatorV3.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/translatorV3.py" beforeDir="false" afterPath="$PROJECT_DIR$/translatorV3.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,11 +57,13 @@
     "Python.AllChapterScraper.executor": "Run",
     "Python.Scraper.executor": "Run",
     "Python.Translator.executor": "Run",
+    "Python.editor.executor": "Run",
     "Python.hanzi_replacer.executor": "Run",
     "Python.replace_chinese_first.executor": "Run",
     "Python.replace_first_test_translator.executor": "Run",
     "Python.test_translator_with_hanzi_replacement.executor": "Run",
     "Python.translate_queue.executor": "Run",
+    "Python.translatorV3.executor": "Run",
     "Python.translator_v3_annotate_hanzi_before_gpt.py.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "main",
@@ -77,9 +77,9 @@
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/final_chapters" />
       <recent name="$PROJECT_DIR$" />
-      <recent name="$PROJECT_DIR$/piaotian_chapters/test" />
       <recent name="$PROJECT_DIR$/old chinese" />
-      <recent name="$PROJECT_DIR$/old scripts" />
+      <recent name="$PROJECT_DIR$/old translated" />
+      <recent name="$PROJECT_DIR$/piaotian_chapters" />
     </key>
   </component>
   <component name="SharedIndexes">
@@ -138,7 +138,55 @@
       <option name="project" value="LOCAL" />
       <updated>1754169673285</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Upgraded prompt, and queue script">
+      <option name="closed" value="true" />
+      <created>1755110009240</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1755110009240</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Save what's working before changes">
+      <option name="closed" value="true" />
+      <created>1755194711043</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1755194711043</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Updated glossary">
+      <option name="closed" value="true" />
+      <created>1755203152840</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1755203152840</updated>
+    </task>
+    <task id="LOCAL-00009" summary="added prompt saving">
+      <option name="closed" value="true" />
+      <created>1755203601456</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1755203601456</updated>
+    </task>
+    <task id="LOCAL-00010" summary="working, but broken glossary, it makes shit up.">
+      <option name="closed" value="true" />
+      <created>1755210435522</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1755210435522</updated>
+    </task>
+    <task id="LOCAL-00011" summary="save before changing the prompt">
+      <option name="closed" value="true" />
+      <created>1755722749572</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1755722749572</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -158,6 +206,12 @@
     <MESSAGE value="Working script before experiments with json glossary and replacement" />
     <MESSAGE value="Working script with translation glossary annotation before sending to gpt" />
     <MESSAGE value="Working script with translation glossary annotation before sending to gpt. Finished and renamed." />
-    <option name="LAST_COMMIT_MESSAGE" value="Working script with translation glossary annotation before sending to gpt. Finished and renamed." />
+    <MESSAGE value="Upgraded prompt, and queue script" />
+    <MESSAGE value="Save what's working before changes" />
+    <MESSAGE value="Updated glossary" />
+    <MESSAGE value="added prompt saving" />
+    <MESSAGE value="working, but broken glossary, it makes shit up." />
+    <MESSAGE value="save before changing the prompt" />
+    <option name="LAST_COMMIT_MESSAGE" value="save before changing the prompt" />
   </component>
 </project>

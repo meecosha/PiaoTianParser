@@ -3,12 +3,12 @@
 ## 1. Tone & Style
 
 * Clear, natural English that reads smoothly.
-* Maintain Classic Xianxia tone: formal, dramatic, reverent.
-* Avoid slang or modern idioms unless in original.
-* Translate for understanding — not word-for-word literalness.
+* Maintain Classic Xianxia tone: formal, dramatic, reverent, but not too much so that it's hard to read.
+* Avoid slang or modern idioms.
 * Use established xianxia phrases (e.g. “courting death”).
 * Watch pronoun clarity carefully.
 * Translate all Hanzi — don’t leave anything untranslated.
+* Do not flatten the metaphors or tone down insults, harshness, and exaggeration!
 
 ## 2. Formatting
 

@@ -16,9 +16,9 @@ CHAPTER_DIR = "piaotian_chapters"
 OUTPUT_DIR = "final_chapters"
 PROMPT_DIR = "prompt_to_gpt"
 # MODEL = "gpt-5-2025-08-07"
-# MODEL = "gpt-5-mini-2025-08-07"
+MODEL = "gpt-5-mini-2025-08-07"
 # MODEL = "gpt-4o-mini-2024-07-18"
-MODEL = "gpt-4.1-mini-2025-04-14"
+# MODEL = "gpt-4.1-mini-2025-04-14"
 # MODEL = "gpt-4o-2024-08-06"
 # MODEL = "o4-mini-2025-04-16"
 
@@ -117,8 +117,8 @@ def update_chapters_index(chapters_dir, output_file=None):
 
 
 def main():
-    # chapter_num = get_next_chapter_number()
-    chapter_num = "0009"
+    chapter_num = get_next_chapter_number()
+    # chapter_num = "0598"
     print(chapter_num)
     chapter_file = f"ch{chapter_num}.txt"
     input_path = Path(CHAPTER_DIR) / chapter_file
@@ -134,6 +134,13 @@ def main():
 
     system_prompt = "You are a professional xianxia translator. Follow all formatting and terminology instructions."
     user_prompt = f"""
+    
+Your instructions consist of three (3!) parts. Do each part diligently. First, I'll give overview, the details are below.
+Part 1 — Translate the chapter from chinese to english according to the rules.
+Part 2 — Add new terms to the glossary
+Part 3 — Compare the raw text with your finished translation, and fix mistakes that you find.
+
+Part 1 — Translate the chapter from chinese to english:
 IMPORTANT:
 If a Hanzi term has an English translation in square brackets after it (like 修罗剑[Shura Sword]), use that English translation in your translation. Don't include the square brackets in the final translated output.
 
@@ -146,6 +153,13 @@ After translating, you MUST perform a fact-checking and fidelity review by compa
 
 Correct any issues found during this review before producing your final translation.
 
+Translate the following chapter to english according to the rules below.
+{rules}
+
+Chapter:
+{annotated_text}
+
+Part 2 — Add new terms to the glossary:
 At the very end of your response, you MUST return only the new glossary terms (all names of characters, sects and places, animals, beasts, plants, techniques, skills, artifacts) that are present verbatim in the provided Chinese chapter text. Only include terms where the key is in Hanzi (Chinese characters) and appears exactly in the provided chapter. Do NOT add, infer, guess, or recall terms from memory, even if you are certain they exist elsewhere in the novel. Do not create alternate versions of known glossary entries — use only the exact form from the text. Do NOT include any entries without Chinese characters. If it's a character's name, include their gender in the glossary, but not in the translation. 
 The glossary must be in this format:
 
@@ -165,11 +179,8 @@ If there are no new terms from this chapter, output exactly:
 
 Do not include any explanation, comments, titles, or extra text before or after the JSON block. The block must be parsable by code as-is.
 
-Translate the following chapter to english according to the rules below.
-{rules}
-
-Chapter:
-{annotated_text}
+Part 3 — Compare the raw text with your finished translation, and fix mistakes that you find:
+Look for any inconsistencies of meaning, or if the sentence doesn't make sense, subject and object are switched, if something was cut off — restore and retranslate from raw. Be careful about pronouns. Check with the rules of translation above if in doubt.
 """
 
     print("\n=== FINAL PROMPT SENT TO GPT ===\n")
