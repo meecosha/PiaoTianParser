@@ -67,7 +67,6 @@ def merge_glossary(existing: dict, candidates: dict, *, overwrite: bool = False)
     added_keys = []
     updated_keys = []
     skipped_keys = []
-
     for k, v in candidates.items():
         if k in existing:
             if overwrite and existing[k] != v:
@@ -78,7 +77,6 @@ def merge_glossary(existing: dict, candidates: dict, *, overwrite: bool = False)
         else:
             existing[k] = v
             added_keys.append(k)
-
     return existing, len(added_keys), len(updated_keys), added_keys, updated_keys, skipped_keys
 
 
@@ -115,10 +113,28 @@ def update_chapters_index(chapters_dir, output_file=None):
 
     print(f"📖 Updated {output_file} with {len(chapters)} chapters.")
 
+def split_into_paragraphs(text: str):
+    """Split raw chapter text into paragraphs for alignment.
+
+    Rules:
+    - Split on blank lines (two or more newlines with optional whitespace)
+    - If the result is only 1 very long paragraph (> 1500 chars) and contains many single newlines,
+      fallback to splitting on single newlines.
+    - Trim whitespace; discard empty.
+    """
+    raw = text.strip().replace('\r\n', '\n')
+    paras = [p.strip() for p in re.split(r"\n\s*\n", raw) if p.strip()]
+    if len(paras) == 1 and len(paras[0]) > 1500 and '\n' in paras[0]:
+        # Fallback: treat each line as a paragraph if original lacked blank separators
+        paras = [ln.strip() for ln in paras[0].split('\n') if ln.strip()]
+    return paras
+
+# =============================================================
+# Main (refactored prompt)
+# =============================================================
 
 def main():
     chapter_num = get_next_chapter_number()
-    # chapter_num = "0598"
     print(chapter_num)
     chapter_file = f"ch{chapter_num}.txt"
     input_path = Path(CHAPTER_DIR) / chapter_file
@@ -130,94 +146,129 @@ def main():
     glossary = json.loads(load_file(GLOSSARY_PATH))
     chapter_text = load_file(input_path)
 
+    # Annotated Chinese first, then split into paragraphs for alignment.
     annotated_text = annotate_with_glossary(chapter_text, glossary)
+    paragraphs = split_into_paragraphs(annotated_text)
 
-    system_prompt = "You are a professional xianxia translator. Follow all formatting and terminology instructions."
+    # Build indexed source string
+    indexed_source_lines = []
+    for idx, para in enumerate(paragraphs, start=1):
+        # Collapse internal excessive whitespace; keep single spaces
+        cleaned = re.sub(r"\s+", " ", para).strip()
+        indexed_source_lines.append(f"@P{idx}: {cleaned}")
+    indexed_source = "\n".join(indexed_source_lines)
+
+    system_prompt = (
+        "Professional Chinese→English xianxia translator. Priorities: fidelity, natural English, glossary adherence via inline annotations, zero omissions/additions. Do NOT invent details. Follow output contract exactly."
+    )
+
+    # (Token savings) — Do NOT embed entire glossary; rely on inline Hanzi[English] annotations only.
+
     user_prompt = f"""
-    
-Your instructions consist of three (3!) parts. Do each part diligently. First, I'll give overview, the details are below.
-Part 1 — Translate the chapter from chinese to english according to the rules.
-Part 2 — Add new terms to the glossary
-Part 3 — Compare the raw text with your finished translation, and fix mistakes that you find.
-
-Part 1 — Translate the chapter from chinese to english:
-IMPORTANT:
-If a Hanzi term has an English translation in square brackets after it (like 修罗剑[Shura Sword]), use that English translation in your translation. Don't include the square brackets in the final translated output.
-
-After translating, you MUST perform a fact-checking and fidelity review by comparing your translation against the original Chinese text to ensure:
-- All pronouns match the correct gender and refer to the right person.
-- All names and titles are correct according t  o the glossary and the original text.
-- Relationships (e.g., brother, cousin, master,     disciple) are accurately preserved.
-- No meaning has been omitted, altered, or added.
-- Contextually ambiguous terms (e.g., 大汉, 向家族, etc.) are interpreted correctly based on the scene.
-
-Correct any issues found during this review before producing your final translation.
-
-Translate the following chapter to english according to the rules below.
+SECTION 0: RESOURCES
+RULES:
 {rules}
 
-Chapter:
-{annotated_text}
+SOURCE CHAPTER (paragraph indexed, existing glossary terms already annotated as Hanzi[English]):
+{indexed_source}
 
-Part 2 — Add new terms to the glossary:
-At the very end of your response, you MUST return only the new glossary terms (all names of characters, sects and places, animals, beasts, plants, techniques, skills, artifacts) that are present verbatim in the provided Chinese chapter text. Only include terms where the key is in Hanzi (Chinese characters) and appears exactly in the provided chapter. Do NOT add, infer, guess, or recall terms from memory, even if you are certain they exist elsewhere in the novel. Do not create alternate versions of known glossary entries — use only the exact form from the text. Do NOT include any entries without Chinese characters. If it's a character's name, include their gender in the glossary, but not in the translation. 
-The glossary must be in this format:
+TASKS (execute strictly in order):
 
-```json
-{{
-  "示例一": "Example Translation One",
-  "示例二": "Example Translation Two",
-  "姓名": "Name (male)",
-  "姓名": "Name (female)"
-}}
+Task 1: Translation
+Produce ONE English paragraph for every source paragraph @P{{n}}. Do not merge, split, omit, or reorder. Leave a blank line between paragraphs.
+Translate according to the RULES above. The whole chapter should be consistent in tone and style, like it's written in the RULES.
+Use the glossary terms already embedded in the source as a guide, hint, recommendation to translate the terms consistently. There should be no Hanzi or square brackets remaining in your English translated output, even if they are written twice. Whatever is in parentheses, like gender in [Zhong Miaoke (female)] or type of artifact like in [Small Water-Nang (medicine)] is a glossary HINT, not something to be copied verbatim. If the glossary is completely unsuitable, use a better English term that fits the context.
+Format exactly:
+=== TRANSLATION START ===
+@P1: ## Chapter # — Title of the Chapter
 
-If there are no new terms from this chapter, output exactly:
+@P2: <English>
 
-```json
+@P3: <English>
+...
+=== TRANSLATION END ===
+
+Task 2: Fidelity Self-Check
+If every paragraph is faithful (no omission/addition/mistranslation/pronoun error/role error/subject-object reversal/term misuse/lord or lady or sir mistakes/herself or himself mistakes/"her or his" mistakes), output:
+=== QA REPORT START ===\nOK\n=== QA REPORT END ===
+Else list only issues you already corrected in the translation block:
+=== QA REPORT START ===
+@P7: issue_type=omission | Missing phrase "原文片段"
+@P12: issue_type=pronoun | he → she (她)
+...
+=== QA REPORT END ===
+
+Task 3: New Glossary Terms
+Identify NEW proper nouns / sects / artifacts / beasts / techniques present in raw Hanzi that are NOT already annotated (i.e., do NOT appear as Hanzi[English]) and NOT obvious generic terms. Keys must be ≥2 Hanzi (unless a consistent mononym). Provide English; append (male) or (female) ONLY for people. Format:
+=== GLOSSARY START ===
+{{"新术语": "New Term"}}
+=== GLOSSARY END ===
+If none:
+=== GLOSSARY START ===
 {{}}
-``` 
+=== GLOSSARY END ===
+Constraints:
+- Do NOT repeat any Hanzi that appeared with [English] annotation.
+- No guesses, no inferred variants, no Latin keys, no duplicates.
 
-Do not include any explanation, comments, titles, or extra text before or after the JSON block. The block must be parsable by code as-is.
+Order (strict):
+1. Translation block
+2. QA report block
+3. Glossary block
+4. Sentinel line: END-OF-OUTPUT
 
-Part 3 — Compare the raw text with your finished translation, and fix mistakes that you find:
-Look for any inconsistencies of meaning, or if the sentence doesn't make sense, subject and object are switched, if something was cut off — restore and retranslate from raw. Be careful about pronouns. Check with the rules of translation above if in doubt.
+Global Prohibitions:
+- No markdown fences ```
+- No extra sections or commentary.
+- Every @P index must appear exactly once in translation block.
+
+END.
 """
 
-    print("\n=== FINAL PROMPT SENT TO GPT ===\n")
+    print("\n=== FINAL PROMPT SENT TO GPT (preview) ===\n")
     print(user_prompt)
-    print("\n=== END OF PROMPT ===\n")
+    print("\n=== END PROMPT PREVIEW ===\n")
 
     print(f"🚀 Translating Chapter {chapter_num}...")
     response = call_gpt(system_prompt, user_prompt)
 
-    # --- Robust glossary block extraction ---
     text = response
 
-    print("\n=== Final Translated Output ===\n")
-    print(response)
-    print("\n=== End of Output ===\n")
+    print("\n=== Raw Model Output (truncated) ===\n")
+    print(text)
+    print("\n=== End Raw Output ===\n")
 
-    # 1) Prefer ```json fenced
-    m = re.search(r"```json\s*({[\s\S]+?})\s*```", text, flags=re.IGNORECASE)
-    reason = "matched ```json fenced block"
-    # 2) Fallback: any fenced code block containing a top-level JSON object
-    if not m:
-        m = re.search(r"```\s*({[\s\S]+?})\s*```", text)
-        reason = "matched generic ``` fenced block"
-    # 3) Fallback: last JSON-ish object in the message
-    if not m:
-        # Greedy to grab the last {...} chunk
-        m = re.search(r"({[\s\S]+})\s*$", text)
-        reason = "matched trailing {…} block (fallback)"
+    # ---------------- Extraction Phase ----------------
+    # 1. Extract glossary JSON between markers first (we need to locate it to split translation).
+    glossary_match = re.search(r"=== GLOSSARY START ===\s*({[\s\S]*?})\s*=== GLOSSARY END ===", text)
+    reason = None
+    if glossary_match:
+        reason = "marker-based glossary block"
+        raw_glossary_block = glossary_match.group(1)
+    else:
+        # Fallback to legacy fenced code parsing
+        fenced = re.search(r"```json\s*({[\s\S]+?})\s*```", text, flags=re.IGNORECASE) or \
+                 re.search(r"```\s*({[\s\S]+?})\s*```", text)
+        if fenced:
+            reason = "legacy fenced glossary block"
+            raw_glossary_block = fenced.group(1)
+        else:
+            # Last resort: trailing JSON object
+            trailing = re.search(r"({[\s\S]+})\s*$", text)
+            if trailing:
+                reason = "trailing JSON fallback"
+                raw_glossary_block = trailing.group(1)
+            else:
+                print("❌ Could not locate a JSON glossary block.")
+                return
 
-    if not m:
-        print("❌ Could not locate a JSON glossary block. Showing tail of response for debugging:\n",
-              text[-800:])
-        return
+    # Translation portion is everything before glossary start marker (preferred)
+    if glossary_match:
+        translation_section = text[:glossary_match.start()].strip()
+    else:
+        translation_section = text[:text.find(raw_glossary_block)].strip()
 
-    translation = text[:m.start()].strip()
-    raw_glossary_block = m.group(1)
-
+    # Parse glossary JSON
     try:
         new_terms = json.loads(raw_glossary_block)
     except json.JSONDecodeError as e:
@@ -227,43 +278,46 @@ Look for any inconsistencies of meaning, or if the sentence doesn't make sense, 
 
     print(f"ℹ️ Glossary block found via: {reason}. Keys received: {len(new_terms)}")
 
-    # ✅ Keep only terms whose KEY has 2+ Hanzi (Chinese characters)
+    # Filter Hanzi keys ≥2 chars
     filtered_terms = {
         k: v for k, v in new_terms.items()
-        if len(re.findall(r"[\u4e00-\u9fff]", k)) >= 2
+        if len(re.findall(r"[\u4e00-\u9fff]", k)) >= 2 and not k in glossary
     }
     if len(filtered_terms) != len(new_terms):
         skipped = [k for k in new_terms.keys() if k not in filtered_terms]
-        print(f"ℹ️ Filtered out {len(skipped)} non-2+Hanzi keys: {skipped[:10]}{' …' if len(skipped) > 10 else ''}")
+        if skipped:
+            print(f"ℹ️ Filtered out existing or short/non-Hanzi keys: {skipped[:10]}{' …' if len(skipped) > 10 else ''}")
 
-    # Merge (make sure your merge_glossary returns the 6-tuple as discussed)
     glossary, added_count, updated_count, added_keys, updated_keys, skipped_keys = merge_glossary(
         glossary,
         filtered_terms,
         overwrite=False
     )
 
-    # Persist and report
     if added_count or updated_count:
         with open(GLOSSARY_PATH, "w", encoding="utf-8") as f:
             json.dump(glossary, f, ensure_ascii=False, indent=2)
         msg = f"📝 Appended {added_count} new glossary term{'s' if added_count != 1 else ''}."
         if updated_count:
-            msg += f" Updated {updated_count} existing entr{'ies' if updated_count != 1 else 'y'}."
+            msg += f" Updated {updated_count} entr{'ies' if updated_count != 1 else 'y'}."
         print(msg)
         if added_keys:
-            print(f"   ➕ Added keys: {added_keys[:10]}{' …' if len(added_keys) > 10 else ''}")
-        if skipped_keys:
-            print(f"   ↩️ Skipped (already existed): {skipped_keys[:10]}{' …' if len(skipped_keys) > 10 else ''}")
+            print(f"   ➕ Added: {added_keys[:10]}{' …' if len(added_keys) > 10 else ''}")
     else:
         print("✅ No new glossary terms.")
 
-    save_file(output_path, translation)
-    save_file(obsidian_output_path, translation)
+    # Save translation (exclude QA & glossary sections for now – we keep everything before glossary)
+    save_file(output_path, translation_section)
+
+
+    save_file(obsidian_output_path, translation_section)
     save_file(prompt_path, user_prompt)
 
-    # After saving the chapter, update the website index
+    # Update index
     obsidian_chapters_dir = "/Users/meecosha/MEGA/Vault/Martial Peak/chapters"
+
+
+
     update_chapters_index(obsidian_chapters_dir, os.path.join(obsidian_chapters_dir, "chapters.json"))
 
     print(f"🎉 Chapter saved to: {output_path} and to Obsidian")
@@ -271,4 +325,3 @@ Look for any inconsistencies of meaning, or if the sentence doesn't make sense, 
 
 if __name__ == "__main__":
     main()
-

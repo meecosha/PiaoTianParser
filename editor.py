@@ -168,7 +168,7 @@ def main():
     # --- Editor system & user prompts ---
     system_prompt = """You are a bilingual xianxia fiction editor."""
 
-    user_prompt = f"""You will receive the raw chinese text and the draft of the first translation. Check the translation. Your main job is to find ANY inconsistencies in logic, context, character dialoge or actions and fix them in the final output. Fix the mistakes and output only the final fixed version of the translation
+    user_prompt = f"""You will receive the raw chinese text and the draft of the first translation. Check the translation. Your main job is to find ANY inconsistencies in logic, context, character dialoge or actions and fix them in the final output. Fix the mistakes and output only the final fixed version of the translation. The info in parentheses in the glossary annotation like 小水馕[Small Water-Nang (medicine)] is only for reference. Do not change the translations if it fits the annotation already. 
 
     RAW (Chinese with annotations):
     {annotated_chinese}
