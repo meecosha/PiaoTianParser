@@ -4,6 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 from openai import OpenAI
+from cleanup_chapters import transform
 
 # === Setup ===
 load_dotenv()
@@ -14,6 +15,7 @@ RULES_PATH = "rules.md"
 GLOSSARY_PATH = "glossary.json"
 CHAPTER_DIR = "piaotian_chapters"
 OUTPUT_DIR = "final_chapters"
+INDEXED_DIR = "indexed_chapters"
 PROMPT_DIR = "prompt_to_gpt"
 # MODEL = "gpt-5-2025-08-07"
 MODEL = "gpt-5-mini-2025-08-07"
@@ -23,6 +25,7 @@ MODEL = "gpt-5-mini-2025-08-07"
 # MODEL = "o4-mini-2025-04-16"
 
 Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+Path(INDEXED_DIR).mkdir(parents=True, exist_ok=True)
 
 def get_next_chapter_number():
     existing = list(Path(OUTPUT_DIR).glob("ch*.md"))
@@ -140,7 +143,8 @@ def main():
     input_path = Path(CHAPTER_DIR) / chapter_file
     output_path = Path(OUTPUT_DIR) / f"ch{chapter_num}.md"
     prompt_path = Path(PROMPT_DIR) / f"prompt_ch{chapter_num}.txt"
-    obsidian_output_path = f"/Users/meecosha/MEGA/Vault/Martial Peak/chapters/ch{chapter_num}.md"
+    indexed_path = Path(INDEXED_DIR) / f"ch{chapter_num}_indexed.md"
+    obsidian_output_path = f"/Users/meecosha/MEGA/Vault/Martial Peak/1 to review/ch{chapter_num}.md"
 
     rules = load_file(RULES_PATH)
     glossary = json.loads(load_file(GLOSSARY_PATH))
@@ -157,6 +161,9 @@ def main():
         cleaned = re.sub(r"\s+", " ", para).strip()
         indexed_source_lines.append(f"@P{idx}: {cleaned}")
     indexed_source = "\n".join(indexed_source_lines)
+    save_file(indexed_path, indexed_source)
+
+
 
     system_prompt = (
         "Professional Chinese→English xianxia translator. Priorities: fidelity, natural English, glossary adherence via inline annotations, zero omissions/additions. Do NOT invent details. Follow output contract exactly."
@@ -189,9 +196,9 @@ Format exactly:
 === TRANSLATION END ===
 
 Task 2: Fidelity Self-Check
-If every paragraph is faithful (no omission/addition/mistranslation/pronoun error/role error/subject-object reversal/term misuse/lord or lady or sir mistakes/herself or himself mistakes/"her or his" mistakes), output:
+If the translation is the best possible translation for the raw Chinese text, if every paragraph is faithful (no omission/addition/mistranslation/pronoun error/role error/subject-object reversal/term misuse/"lord or lady or sir" mistakes/herself or himself mistakes/"her or his" mistakes), output.
 === QA REPORT START ===\nOK\n=== QA REPORT END ===
-Else list only issues you already corrected in the translation block:
+Else, correct the translation and list the issues you corrected in the block like this:
 === QA REPORT START ===
 @P7: issue_type=omission | Missing phrase "原文片段"
 @P12: issue_type=pronoun | he → she (她)
@@ -310,14 +317,14 @@ END.
     save_file(output_path, translation_section)
 
 
-    save_file(obsidian_output_path, translation_section)
+
     save_file(prompt_path, user_prompt)
+
+    cleaned = transform(translation_section)
+    save_file(obsidian_output_path, cleaned)
 
     # Update index
     obsidian_chapters_dir = "/Users/meecosha/MEGA/Vault/Martial Peak/chapters"
-
-
-
     update_chapters_index(obsidian_chapters_dir, os.path.join(obsidian_chapters_dir, "chapters.json"))
 
     print(f"🎉 Chapter saved to: {output_path} and to Obsidian")
