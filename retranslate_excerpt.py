@@ -2,8 +2,10 @@ import argparse
 import os
 import re
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 from dotenv import load_dotenv
+
+load_dotenv()
 
 try:
     from openai import OpenAI  # type: ignore
@@ -15,6 +17,7 @@ RAW_CHINESE_DIR = Path("piaotian_chapters")
 
 P_LINE_RE = re.compile(r'^@P(\d+):\s*(.*)$')
 TRANSLATION_BLOCK_RE = re.compile(r'=== TRANSLATION START ===\s*([\s\S]*?)=== TRANSLATION END ===', re.MULTILINE)
+RETRANS_BLOCK_RE = re.compile(r'=== RETRANSLATION START ===\s*([\s\S]*?)\s*=== RETRANSLATION END ===', re.MULTILINE)
 BLANK_SPLIT_RE = re.compile(r"\n\s*\n")
 
 
@@ -96,6 +99,8 @@ def find_best_chapter(excerpt: str, fuzzy: bool=False) -> List[Tuple[str, List[i
     return matches
 
 def build_retranslation_prompt(chapter_id: str, hit_pnums: List[int], translation_paras: List[Tuple[int, str]], raw_chinese_paras: List[str], context: int) -> str:
+    # Guarantee at least 1 paragraph of context above/below regardless of user input
+    context = max(1, context)
     pmin, pmax = min(hit_pnums), max(hit_pnums)
     pmin_ctx = max(1, pmin - context)
     pmax_ctx = min(len(raw_chinese_paras), pmax + context)
@@ -117,21 +122,21 @@ CURRENT TRANSLATION (English, context):
 {os.linesep.join(eng_slice)}
 
 INSTRUCTIONS:
-- Retranslate ONLY paragraphs with an asterisk (*).
-- Output format:
+- Retranslate ONLY paragraphs with an asterisk (*). Context (non-star) lines are provided for reference; DO NOT output them.
+- Output format EXACTLY:
 === RETRANSLATION START ===
 @P<id>: <new English>
 @P<id>: <new English>
 === RETRANSLATION END ===
 - One line per retranslated paragraph, no others.
-- No Chinese, no notes.
-- Keep established names consistent unless clearly wrong.
+- Do NOT include Chinese in the output (the tool will merge it locally).
+- No notes, no explanations, no extra markers.
 Provide only the block.
 """.strip()
     return system_prompt, user_prompt
 
 load_dotenv()
-def call_openai(system_prompt: str, user_prompt: str, model: str = "gpt-4o-mini") -> str:
+def call_openai(system_prompt: str, user_prompt: str, model: str = "gpt-5-mini-2025-08-07") -> Tuple[str, Dict[str, Any]]:
     if OpenAI is None:
         raise RuntimeError("openai package not installed. pip install openai")
     api_key = os.getenv("OPENAI_API_KEY")
@@ -141,19 +146,28 @@ def call_openai(system_prompt: str, user_prompt: str, model: str = "gpt-4o-mini"
     resp = client.chat.completions.create(
         model=model,
         messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-        temperature=0.2,
     )
-    return resp.choices[0].message.content
+    usage = {
+        "prompt_tokens": getattr(resp.usage, 'prompt_tokens', None),
+        "completion_tokens": getattr(resp.usage, 'completion_tokens', None),
+        "total_tokens": getattr(resp.usage, 'total_tokens', None),
+    }
+    content = resp.choices[0].message.content
+    return content, usage
 
 def main():
     parser = argparse.ArgumentParser(description="Retranslate excerpt. Usage: python retranslate_excerpt.py your phrase here")
     parser.add_argument('excerpt', nargs='*', help='Excerpt phrase (no quotes needed).')
-    parser.add_argument('--model', default='gpt-4o-mini')
+    parser.add_argument('--model', default='gpt-5-mini-2025-08-07', help='Override model name (ignored if --gpt5 used).')
+    parser.add_argument('--gpt5', action='store_true', help='Use gpt-5-2025-08-07 model (overrides --model).')
     parser.add_argument('--context', type=int, default=1)
     parser.add_argument('--chapter', help='Force chapter id like ch0600')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--fuzzy', action='store_true', help='Enable token-overlap fallback if exact phrase not found.')
     args = parser.parse_args()
+
+    # Decide model (flag overrides explicit --model)
+    model_name = 'gpt-5-2025-08-07' if args.gpt5 else args.model
 
     excerpt = ' '.join(args.excerpt).strip()
     if not excerpt:
@@ -192,7 +206,7 @@ def main():
     else:
         chapter_name, hit_pnums = matches[0]
 
-    print(f"Using chapter {chapter_name}, paragraphs {hit_pnums}")
+    print(f"Using chapter {chapter_name}, paragraphs {hit_pnums} (model: {model_name})")
     chapter_path = FINAL_CHAPTERS_DIR / chapter_name
     translation_paras = parse_p_paragraphs(extract_translation_section(load_text(chapter_path)))
 
@@ -206,19 +220,46 @@ def main():
     system_prompt, user_prompt = build_retranslation_prompt(chapter_id, hit_pnums, translation_paras, raw_paragraphs, args.context)
 
     if args.dry_run:
-        print("==== SYSTEM PROMPT ====")
+        print("==== SYSTEM PROMPT (SENT) ====")
         print(system_prompt)
-        print("\n==== USER PROMPT ====")
+        print("\n==== USER PROMPT (SENT) ====")
         print(user_prompt)
+        print(f"\n(Model: {model_name})")
         return
 
+    print("==== SYSTEM PROMPT (SENT) ====")
+    print(system_prompt)
+    print("\n==== USER PROMPT (SENT) ====")
+    print(user_prompt)
+    print(f"\n==== CALLING MODEL (model: {model_name}) ====")
     try:
-        out = call_openai(system_prompt, user_prompt, model=args.model)
+        out, usage = call_openai(system_prompt, user_prompt, model=model_name)
     except Exception as e:
         print(f"OpenAI error: {e}")
         return
     print("\n==== MODEL OUTPUT ====")
     print(out)
+    print("\n==== TOKEN USAGE ====")
+    print(f"prompt: {usage.get('prompt_tokens')} | completion: {usage.get('completion_tokens')} | total: {usage.get('total_tokens')}")
+
+    m = RETRANS_BLOCK_RE.search(out)
+    if not m:
+        print("⚠️ Could not find retranslation block for merging Chinese text.")
+        return
+    block = m.group(1).strip()
+    new_lines = []
+    for line in block.splitlines():
+        line = line.strip()
+        pm = re.match(r'^@P(\d+):\s*(.*)$', line)
+        if not pm:
+            continue
+        pnum = int(pm.group(1))
+        new_en = pm.group(2)
+        zh = raw_paragraphs[pnum-1] if 0 <= pnum-1 < len(raw_paragraphs) else ''
+        new_lines.append(f"@P{pnum} ZH: {zh}\n@P{pnum} EN: {new_en}")
+    if new_lines:
+        print("\n==== MERGED CHINESE + NEW ENGLISH ====")
+        print("\n\n".join(new_lines))
 
 if __name__ == "__main__":
     main()
