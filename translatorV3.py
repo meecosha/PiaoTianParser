@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from datetime import datetime, timezone
 from openai import OpenAI
 from cleanup_chapters import transform
 
@@ -85,12 +86,13 @@ def merge_glossary(existing: dict, candidates: dict, *, overwrite: bool = False)
 
 def annotate_with_glossary(text, glossary):
     for hanzi, translation in sorted(glossary.items(), key=lambda x: len(x[0]), reverse=True):
-        pattern = re.escape(hanzi) + r"(?!\s*\()"
+        # match hanzi not followed by another Chinese char, unless already annotated
+        pattern = re.escape(hanzi) + r"(?!\s*\[)"
         text = re.sub(pattern, f"{hanzi}[{translation}]", text)
     return text
 
 def update_chapters_index(chapters_dir, output_file=None):
-    """Regenerate chapters.json from all .md files in chapters_dir."""
+    """Regenerate chapters.json from all .md files in chapters_dir adding 'updated' UTC ISO timestamp."""
     import json, os
 
     if output_file is None:
@@ -100,21 +102,25 @@ def update_chapters_index(chapters_dir, output_file=None):
     for fname in sorted(os.listdir(chapters_dir)):
         if fname.endswith(".md"):
             path = os.path.join(chapters_dir, fname)
+            # extract first non-empty line for title
+            title = fname
             with open(path, "r", encoding="utf-8") as f:
-                # take the first non-empty line
                 for line in f:
                     line = line.strip()
                     if line:
                         title = line.lstrip("#").strip()
                         break
-                else:
-                    title = fname
-            chapters.append({"id": fname[:-3], "title": title})
+            mtime = datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat()
+            chapters.append({
+                "id": fname[:-3],
+                "title": title,
+                "updated": mtime
+            })
 
     with open(output_file, "w", encoding="utf-8") as out:
         json.dump(chapters, out, ensure_ascii=False, indent=2)
 
-    print(f"📖 Updated {output_file} with {len(chapters)} chapters.")
+    print(f"📖 Updated {output_file} with {len(chapters)} chapters (with timestamps).")
 
 def split_into_paragraphs(text: str):
     """Split raw chapter text into paragraphs for alignment.
@@ -137,7 +143,8 @@ def split_into_paragraphs(text: str):
 # =============================================================
 
 def main():
-    chapter_num = get_next_chapter_number()
+    # chapter_num = get_next_chapter_number()
+    chapter_num = "0641"
     print(chapter_num)
     chapter_file = f"ch{chapter_num}.txt"
     input_path = Path(CHAPTER_DIR) / chapter_file

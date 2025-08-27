@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 from openai import OpenAI
 import difflib
+from datetime import datetime, timezone
 
 # === Setup ===
 load_dotenv()
@@ -64,35 +65,34 @@ def annotate_with_glossary(text, glossary):
     """
     for hanzi, translation in sorted(glossary.items(), key=lambda x: len(x[0]), reverse=True):
         pattern = re.escape(hanzi) + r"(?!\s*\()"
-        text = re.sub(pattern, f"{hanzi}[{translation}]", text)
+        text = re.sub(pattern, f"{hanzi}[{translation}]")
     return text
 
 def update_chapters_index(chapters_dir, output_file=None):
-    """Regenerate chapters.json from all .md files in chapters_dir."""
+    """Regenerate chapters.json from all .md files in chapters_dir with 'updated' timestamp."""
     import json, os
-
     if output_file is None:
         output_file = os.path.join(chapters_dir, "chapters.json")
-
     chapters = []
     for fname in sorted(os.listdir(chapters_dir)):
         if fname.endswith(".md"):
             path = os.path.join(chapters_dir, fname)
+            title = fname
             with open(path, "r", encoding="utf-8") as f:
-                # take the first non-empty line
                 for line in f:
                     line = line.strip()
                     if line:
                         title = line.lstrip("#").strip()
                         break
-                else:
-                    title = fname
-            chapters.append({"id": fname[:-3], "title": title})
-
+            mtime = datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat()
+            chapters.append({
+                "id": fname[:-3],
+                "title": title,
+                "updated": mtime
+            })
     with open(output_file, "w", encoding="utf-8") as out:
         json.dump(chapters, out, ensure_ascii=False, indent=2)
-
-    print(f"📖 Updated {output_file} with {len(chapters)} chapters.")
+    print(f"📖 Updated {output_file} with {len(chapters)} chapters (timestamps added).")
 
 def scan_latest_chapter_num():
     """
@@ -162,24 +162,13 @@ def main():
     raw_chinese = load_file(raw_path)
     draft_english = load_file(draft_path)
 
-    # Annotate Chinese with fixed glossary to lock in terms like 修罗剑[Shura Sword] etc.
     annotated_chinese = annotate_with_glossary(raw_chinese, glossary)
 
-    # --- Editor system & user prompts ---
     system_prompt = """You are a bilingual xianxia fiction editor."""
-
-    user_prompt = f"""You will receive the raw chinese text and the draft of the first translation. Check the translation. Your main job is to find ANY inconsistencies in logic, context, character dialoge or actions and fix them in the final output. Fix the mistakes and output only the final fixed version of the translation. The info in parentheses in the glossary annotation like 小水馕[Small Water-Nang (medicine)] is only for reference. Do not change the translations if it fits the annotation already. 
-
-    RAW (Chinese with annotations):
-    {annotated_chinese}
-
-    DRAFT (English):
-    {draft_english}
-    """
+    user_prompt = f"""You will receive the raw chinese text and the draft of the first translation. Check the translation. Your main job is to find ANY inconsistencies in logic, context, character dialoge or actions and fix them in the final output. Fix the mistakes and output only the final fixed version of the translation\n\nRAW (Chinese with annotations):\n{annotated_chinese}\n\nDRAFT (English):\n{draft_english}\n"""
 
     print("\n=== EDITOR PROMPT (preview) ===\n")
-    preview = user_prompt
-    print(preview)
+    print(user_prompt[:2000] + ("..." if len(user_prompt) > 2000 else ""))
     print("\n=== END PROMPT PREVIEW ===\n")
 
     print(f"🛠️ Editing ch{chapter_num}...")
@@ -187,18 +176,13 @@ def main():
 
     corrected = extract_codeblock_or_text(response)
 
-    # Save prompt and outputs
     save_file(prompt_path, user_prompt)
     save_file(final_path, corrected)
-    # save_file(obsidian_output_path, corrected)
-
     print_diff(draft_english, corrected)
 
-    # Update index for the FINAL dir (for your site/UI)
     update_chapters_index(FINAL_DIR, os.path.join(FINAL_DIR, "chapters.json"))
 
     print(f"🎉 Final chapter saved to: {final_path}")
-    # print(f"🧭 Also mirrored to Obsidian: {obsidian_output_path}")
 
 if __name__ == "__main__":
     main()
