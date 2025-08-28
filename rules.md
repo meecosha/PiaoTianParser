@@ -2,8 +2,9 @@
 
 ## 1. Tone & Style
 
-* Clear, natural English that reads smoothly.
 * Maintain Classic Xianxia tone: formal, dramatic, reverent, but not too much so that it's hard to read.
+* Be mindful of rhythm, flow, and tone.
+* Clear, natural English that reads smoothly. Use American English if ambiguous.
 * Avoid slang or modern idioms.
 * Use established xianxia phrases (e.g. “courting death”).
 * Watch pronoun clarity carefully.
