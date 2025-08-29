@@ -143,8 +143,8 @@ def split_into_paragraphs(text: str):
 # =============================================================
 
 def main():
-    # chapter_num = get_next_chapter_number()
-    chapter_num = "0653"
+    chapter_num = get_next_chapter_number()
+    # chapter_num = "0653"
     print(chapter_num)
     chapter_file = f"ch{chapter_num}.txt"
     input_path = Path(CHAPTER_DIR) / chapter_file

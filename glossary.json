@@ -26,8 +26,9 @@
   "俞傲晴": "Yu Aoqing",
   "信筏": "Letter Raft",
   "修罗剑": "Shura Sword",
-  "傲骨金身": "Proud Bone Golden Body",
+  "傲骨金身": "Indomitable Golden Body",
   "元气": "Yuan Qi",
+  "水馕": "Water-Nang",
   "气血": "Qi and blood",
   "凌太虚": "Ling Taixu",
   "凌霄阁": "Lingxiao Pavilion",
@@ -283,7 +284,7 @@
   "东公子": "Young Master Dong",
   "玄阶上品": "Upper-Level",
   "灵阶": "Spirit Realm",
-  "傲骨金身诀": "Proud Bone Golden Body Technique",
+  "傲骨金身诀": "Indomitable Golden Body Technique",
   "箫老": "Elder Xiao",
   "铁骨草": "Iron Bone Grass",
   "师叔": "Senior Aunt/Uncle (depends on gender)",
@@ -730,7 +731,6 @@
   "芸丽": "Yunli (female)",
   "小莫": "Xiao Mo",
   "化生池": "Huasheng Pool",
-  "水馕": "Water-Nang",
   "毒寡妇": "Poison Widow (female)",
   "入圣境": "Saint Realm",
   "万载寒冰床": "Ten-Thousand-Year Cold Ice Bed",
@@ -811,5 +811,9 @@
   "阳晶矿": "Yang Crystal Ore",
   "魔神变": "Demon God Transformation",
   "天道法则": "Laws of the Heavenly Dao",
-  "大汉朝": "Great Han Dynasty"
+  "大汉朝": "Great Han Dynasty",
+  "虚空戒": "Void Ring",
+  "圣晶": "Saint Crystal",
+  "天地能量": "Heaven-and-Earth Energy",
+  "灭世魔眼": "World-Ending Demon Eye"
 }
