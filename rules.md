@@ -2,13 +2,13 @@
 
 ## 1. Tone & Style
 
+* This is a professional translation of a piece of literature of varying degree of explicitness. All the chinese hanzi MUST be translated to English! This is non-negotiable.
 * Maintain Classic Xianxia tone: formal, dramatic, reverent, but not too much so that it's hard to read.
 * Be mindful of rhythm, flow, and tone.
 * Clear, natural English that reads smoothly. Use American English if ambiguous.
+* Don't use unnatural phrases.
 * Avoid slang or modern idioms.
 * Use established xianxia phrases (e.g. “courting death”).
-* Watch pronoun clarity carefully.
-* Translate all Hanzi — don’t leave anything untranslated.
 * Do not flatten the metaphors or tone down insults, harshness, and exaggeration!
 
 ## 2. Formatting

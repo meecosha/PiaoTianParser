@@ -123,6 +123,7 @@ CURRENT TRANSLATION (English, context):
 
 INSTRUCTIONS:
 - Retranslate ONLY paragraphs with an asterisk (*). Context (non-star) lines are provided for reference; DO NOT output them.
+- If possible, make the translation from a different angle of meaning that the provided translation, so that the meaning can be discerned.
 - Output format EXACTLY:
 === RETRANSLATION START ===
 @P<id>: <new English>
